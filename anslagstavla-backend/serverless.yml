@@ -1,0 +1,72 @@
+service: anslagstavla-api
+
+provider:
+  name: aws
+  runtime: nodejs18.x  # Update this line
+  stage: dev
+  region: eu-north-1
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${self:provider.stage}  # Använd det exakta namnet på din manuellt skapade tabell
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+  iam:
+    role: arn:aws:iam::050451406575:role/LambdaDynamoDBUserrole
+
+functions:
+  createMessage:
+    handler: functions/createMessage.handler
+    events:
+      - http:
+          path: messages
+          method: post
+          cors: true
+
+  getMessages:
+    handler: functions/getMessages.handler
+    events:
+      - http:
+          path: messages
+          method: get
+          cors: true
+
+  updateMessage:
+    handler: functions/updateMessage.handler
+    events:
+      - http:
+          path: messages/{id}
+          method: put
+          cors: true
+
+  deleteMessage:
+    handler: functions/deleteMessage.handler
+    events:
+      - http:
+          path: messages/{id}
+          method: delete
+          cors: true
+
+  getMessagesByUser:
+    handler: functions/getMessagesByUser.handler
+    events:
+      - http:
+          path: messages/user/{username}
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    MessagesDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
